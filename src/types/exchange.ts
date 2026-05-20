@@ -1,42 +1,44 @@
+export type Region = 'asia' | 'europe' | 'americas';
+
+export interface LunchBreak {
+  start: string; // "HH:MM" local time
+  end: string;
+}
+
 export interface Exchange {
   id: string;
   name: string;
   nameKr: string;
   country: string;
-  timezone: string;
-  gmtOffset: number;
-  openTime: string; // "09:00" format
-  closeTime: string; // "15:30" format
-  lunchBreak?: {
-    start: string; // "11:30" format
-    end: string;   // "13:00" format
-  };
-  region: 'asia' | 'europe' | 'americas';
-  dst?: {
-    startMonth: number; // 3 = March
-    startWeek: number;  // 2 = 2nd week, -1 = last week
-    startDay: number;   // 0 = Sunday
-    endMonth: number;   // 11 = November
-    endWeek: number;    // 1 = 1st week, -1 = last week  
-    endDay: number;     // 0 = Sunday
-    offsetDiff: number; // +1 for DST (보통 +1 시간)
-  };
-  specialInfo: {
-    features: string[];
-    tradingCurrency: string;
-    settlementCycle: string;
-    website: string;
-  };
+  flag: string;
+  timezone: string; // IANA timezone
+  gmtOffset: number; // base (non-DST)
+  openTime: string; // "HH:MM" local time
+  closeTime: string;
+  lunchBreak?: LunchBreak;
+  region: Region;
+  currency: string;
+}
+
+export type MarketStatus = 'open' | 'lunch' | 'closed';
+
+export interface TimeSegment {
+  startMin: number; // 0–1439 KST minutes
+  endMin: number;
+  type: 'open' | 'lunch';
 }
 
 export interface ExchangeStatus {
   exchange: Exchange;
-  localTime: string;
-  kstTime: string;
-  isOpen: boolean;
-  isLunchBreak: boolean;
-  nextEvent: 'open' | 'close' | 'lunch_start' | 'lunch_end';
-  timeToNextEvent: string;
-  isDST?: boolean; // 현재 서머타임인지 여부
-  currentGmtOffset?: number; // DST 적용된 현재 GMT 오프셋
+  status: MarketStatus;
+  localTimeStr: string;    // current local time "HH:MM:SS"
+  kstOpenStr: string;      // KST open "HH:MM"
+  kstCloseStr: string;     // KST close "HH:MM"
+  localOpenStr: string;    // local open "HH:MM"
+  localCloseStr: string;   // local close "HH:MM"
+  gmtOffsetNow: number;    // real-time offset incl. DST
+  isDST: boolean;
+  secondsToNext: number;   // seconds until next event
+  nextEvent: 'open' | 'close' | 'lunch_end';
+  timelineSegments: TimeSegment[];
 }

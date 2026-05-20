@@ -4,7 +4,21 @@
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>글로벌 증권거래소 모니터링 시스템 (Copy)</title>
+      <title>Global Market Monitor</title>
+      <script src="https://cdn.tailwindcss.com"></script>
+      <script>
+        tailwind.config = {
+          darkMode: 'class',
+          theme: {
+            extend: {}
+          }
+        }
+      </script>
+      <style type="text/tailwindcss">
+        @layer base {
+          body { @apply bg-gray-950 text-gray-100 antialiased; }
+        }
+      </style>
     </head>
 
     <body>

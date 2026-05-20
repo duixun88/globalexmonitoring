@@ -1,344 +1,239 @@
-import { AlertSettings } from '../types/alert';
-import { Exchange } from '../types/exchange';
+import { Exchange, ExchangeStatus, MarketStatus, TimeSegment } from '../types/exchange';
 
-export function timeToPixels(timeString: string): number {
-  const [hours, minutes] = timeString.split(':').map(Number);
-  return (hours * 60 + minutes) * (1000 / (24 * 60));
-}
+// ── Core timezone utilities (Intl-based, DST automatic) ──────────
 
-export function getCurrentTimePixels(date: Date): number {
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const seconds = date.getSeconds();
-  return ((hours * 60 + minutes) * 60 + seconds) * (1000 / (24 * 60 * 60));
-}
-
-export function getLocalTimePixels(date: Date): number {
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const seconds = date.getSeconds();
-  return ((hours * 60 + minutes) * 60 + seconds) * (1000 / (24 * 60 * 60));
-}
-
-export function getCurrentKSTTime(): Date {
-  // 현재 UTC 시간 구하기
+/** Returns the real UTC offset in minutes for a timezone at this instant (DST included). */
+export function getTZOffsetMinutes(timezone: string): number {
   const now = new Date();
-  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-  
-  // KST는 UTC+9이므로 9시간(32400000ms) 추가
-  const kstTime = new Date(utcTime + (9 * 60 * 60 * 1000));
-  
-  return kstTime;
+  const utc = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const local = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+  return (local.getTime() - utc.getTime()) / 60000;
 }
 
-// DST 적용 여부를 확인하는 함수
-export function isDSTActive(exchange: Exchange, currentDate: Date): boolean {
-  if (!exchange.dst) {
-    return false; // DST 정보가 없으면 DST 적용 안함
-  }
-
-  const { startMonth, startWeek, startDay, endMonth, endWeek, endDay } = exchange.dst;
-  const year = currentDate.getFullYear();
-
-  // DST 시작일 계산
-  const dstStart = getDSTDate(year, startMonth, startWeek, startDay);
-  
-  // DST 종료일 계산
-  const dstEnd = getDSTDate(year, endMonth, endWeek, endDay);
-
-  const currentTime = currentDate.getTime();
-  const startTime = dstStart.getTime();
-  const endTime = dstEnd.getTime();
-
-  return currentTime >= startTime && currentTime < endTime;
+/** Returns the real UTC offset in hours (may be fractional, e.g. 5.5 for IST). */
+export function getTZOffsetHours(timezone: string): number {
+  return getTZOffsetMinutes(timezone) / 60;
 }
 
-// DST 시작/종료일을 계산하는 함수
-function getDSTDate(year: number, month: number, week: number, dayOfWeek: number): Date {
-  // month는 1-12, week는 1-5 또는 -1(마지막주), dayOfWeek는 0(일요일)-6(토요일)
-  
-  const firstDay = new Date(year, month - 1, 1);
-  
-  if (week === -1) {
-    // 마지막 주 계산
-    const lastDay = new Date(year, month, 0); // 해당 월의 마지막 날
-    const lastDayOfWeek = lastDay.getDay();
-    const daysBack = (lastDayOfWeek - dayOfWeek + 7) % 7;
-    return new Date(year, month - 1, lastDay.getDate() - daysBack, 2, 0, 0); // 오전 2시
-  } else {
-    // 특정 주 계산
-    const firstDayOfWeek = firstDay.getDay();
-    const daysToAdd = (dayOfWeek - firstDayOfWeek + 7) % 7;
-    const targetDate = 1 + daysToAdd + (week - 1) * 7;
-    return new Date(year, month - 1, targetDate, 2, 0, 0); // 오전 2시
-  }
+/** "HH:MM" local time → KST minutes (0–1439), wraps across midnight. */
+export function localTimeToKSTMinutes(hhmm: string, timezone: string): number {
+  const [h, m] = hhmm.split(':').map(Number);
+  const localMin = h * 60 + m;
+  const offsetMin = getTZOffsetMinutes(timezone);
+  const kst = localMin - offsetMin + 9 * 60;
+  return ((kst % 1440) + 1440) % 1440;
 }
 
-// DST를 적용한 현재 GMT 오프셋을 계산하는 함수
-export function getCurrentGmtOffset(exchange: Exchange, currentDate: Date): number {
-  const baseOffset = exchange.gmtOffset;
-  
-  if (!exchange.dst) {
-    return baseOffset;
-  }
-
-  const isDST = isDSTActive(exchange, currentDate);
-  return isDST ? baseOffset + exchange.dst.offsetDiff : baseOffset;
+/** KST minutes → "HH:MM" string. Optionally marks +1 day. */
+export function kstMinutesToStr(min: number, showNextDay = false): string {
+  const wrapped = ((min % 1440) + 1440) % 1440;
+  const h = Math.floor(wrapped / 60).toString().padStart(2, '0');
+  const m = (wrapped % 60).toString().padStart(2, '0');
+  const suffix = showNextDay && min >= 1440 ? '+1' : '';
+  return `${h}:${m}${suffix}`;
 }
 
-export function getLocalTime(exchange: any, kstTime: Date): Date {
-  const utc = kstTime.getTime() + (kstTime.getTimezoneOffset() * 60000);
-  // DST를 고려한 GMT 오프셋 사용
-  const currentGmtOffset = getCurrentGmtOffset(exchange, kstTime);
-  const exchangeTime = new Date(utc + (currentGmtOffset * 3600000));
-  return exchangeTime;
+/** Current local time string for a given IANA timezone. */
+export function getLocalTimeStr(timezone: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(new Date());
 }
 
-export function getExchangeStatus(exchange: any, kstTime: Date) {
-  const localTime = getLocalTime(exchange, kstTime);
-  
-  const [openHour, openMinute] = exchange.openTime.split(':').map(Number);
-  const [closeHour, closeMinute] = exchange.closeTime.split(':').map(Number);
-  
-  const currentHour = localTime.getHours();
-  const currentMinute = localTime.getMinutes();
-  const currentTimeInMinutes = currentHour * 60 + currentMinute;
-  const openTimeInMinutes = openHour * 60 + openMinute;
-  const closeTimeInMinutes = closeHour * 60 + closeMinute;
-  
-  // DST 상태 확인
-  const isDST = isDSTActive(exchange, kstTime);
-  const currentGmtOffset = getCurrentGmtOffset(exchange, kstTime);
-  
-  // 점심시간 체크
-  let isLunchBreak = false;
-  let lunchStartInMinutes = 0;
-  let lunchEndInMinutes = 0;
-  
-  if (exchange.lunchBreak) {
-    const [lunchStartHour, lunchStartMinute] = exchange.lunchBreak.start.split(':').map(Number);
-    const [lunchEndHour, lunchEndMinute] = exchange.lunchBreak.end.split(':').map(Number);
-    lunchStartInMinutes = lunchStartHour * 60 + lunchStartMinute;
-    lunchEndInMinutes = lunchEndHour * 60 + lunchEndMinute;
-    
-    isLunchBreak = currentTimeInMinutes >= lunchStartInMinutes && currentTimeInMinutes < lunchEndInMinutes;
-  }
-  
-  const isOpen = currentTimeInMinutes >= openTimeInMinutes && currentTimeInMinutes < closeTimeInMinutes && !isLunchBreak;
-  
-  let nextEvent: 'open' | 'close' | 'lunch_start' | 'lunch_end';
-  let timeToNextEvent: string;
-  
-  if (isLunchBreak) {
-    nextEvent = 'lunch_end';
-    const minutesToLunchEnd = lunchEndInMinutes - currentTimeInMinutes;
-    if (minutesToLunchEnd > 60) {
-      timeToNextEvent = `${Math.floor(minutesToLunchEnd / 60)}시간 ${minutesToLunchEnd % 60}분 후 점심휴장 종료`;
+/** Current KST time string. */
+export function getKSTTimeStr(): string {
+  return getLocalTimeStr('Asia/Seoul');
+}
+
+/** Is DST currently active for the given timezone?
+ *  Compares current offset to the non-DST (winter) offset. */
+export function isDSTActive(timezone: string, baseGmtOffset: number): boolean {
+  const current = getTZOffsetMinutes(timezone);
+  return current !== baseGmtOffset * 60;
+}
+
+// ── Exchange status calculation ───────────────────────────────────
+
+/** Current local time in minutes (0–1439) for a given IANA timezone. */
+function getLocalMinutesNow(timezone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false,
+  }).formatToParts(new Date());
+
+  const get = (type: string) => {
+    const v = parseInt(parts.find(p => p.type === type)?.value ?? '0');
+    return type === 'hour' && v === 24 ? 0 : v; // midnight edge case
+  };
+  return get('hour') * 60 + get('minute');
+}
+
+function getLocalSecondsNow(timezone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false,
+  }).formatToParts(new Date());
+
+  const get = (type: string) => {
+    const v = parseInt(parts.find(p => p.type === type)?.value ?? '0');
+    return type === 'hour' && v === 24 ? 0 : v;
+  };
+  return get('hour') * 3600 + get('minute') * 60 + get('second');
+}
+
+function parseHHMM(hhmm: string): { h: number; m: number; total: number } {
+  const [h, m] = hhmm.split(':').map(Number);
+  return { h, m, total: h * 60 + m };
+}
+
+/** Build KST timeline segments for a single exchange. */
+function buildTimelineSegments(exchange: Exchange): TimeSegment[] {
+  const { openTime, closeTime, lunchBreak, timezone } = exchange;
+
+  const openKST = localTimeToKSTMinutes(openTime, timezone);
+  const closeKST = localTimeToKSTMinutes(closeTime, timezone);
+
+  const segments: TimeSegment[] = [];
+
+  if (!lunchBreak) {
+    if (closeKST > openKST) {
+      segments.push({ startMin: openKST, endMin: closeKST, type: 'open' });
     } else {
-      timeToNextEvent = `${minutesToLunchEnd}분 후 점심휴장 종료`;
+      // crosses midnight in KST
+      segments.push({ startMin: openKST, endMin: 1440, type: 'open' });
+      segments.push({ startMin: 0, endMin: closeKST, type: 'open' });
     }
-  } else if (currentTimeInMinutes >= openTimeInMinutes && currentTimeInMinutes < closeTimeInMinutes) {
-    // 정규 거래시간 중
-    if (exchange.lunchBreak && currentTimeInMinutes < lunchStartInMinutes) {
-      // 점심시간 전
-      nextEvent = 'lunch_start';
-      const minutesToLunch = lunchStartInMinutes - currentTimeInMinutes;
-      if (minutesToLunch > 60) {
-        timeToNextEvent = `${Math.floor(minutesToLunch / 60)}시간 ${minutesToLunch % 60}분 후 점심휴장 시작`;
+  } else {
+    const lunchStartKST = localTimeToKSTMinutes(lunchBreak.start, timezone);
+    const lunchEndKST = localTimeToKSTMinutes(lunchBreak.end, timezone);
+
+    segments.push({ startMin: openKST, endMin: lunchStartKST, type: 'open' });
+    segments.push({ startMin: lunchStartKST, endMin: lunchEndKST, type: 'lunch' });
+    segments.push({ startMin: lunchEndKST, endMin: closeKST, type: 'open' });
+  }
+
+  return segments;
+}
+
+export function computeExchangeStatus(exchange: Exchange): ExchangeStatus {
+  const { timezone, openTime, closeTime, lunchBreak, gmtOffset } = exchange;
+
+  const nowLocalMin = getLocalMinutesNow(timezone);
+  const nowLocalSec = getLocalSecondsNow(timezone);
+
+  const open = parseHHMM(openTime);
+  const close = parseHHMM(closeTime);
+
+  const isInRange = (min: number, startMin: number, endMin: number) =>
+    min >= startMin && min < endMin;
+
+  let status: MarketStatus = 'closed';
+  let nextEvent: ExchangeStatus['nextEvent'] = 'open';
+  let secondsToNext = 0;
+
+  const inMainSession =
+    isInRange(nowLocalMin, open.total, close.total);
+
+  if (lunchBreak) {
+    const lunch = {
+      start: parseHHMM(lunchBreak.start),
+      end: parseHHMM(lunchBreak.end),
+    };
+
+    if (inMainSession && isInRange(nowLocalMin, lunch.start.total, lunch.end.total)) {
+      status = 'lunch';
+      nextEvent = 'lunch_end';
+      const lunchEndSec = lunch.end.total * 60;
+      secondsToNext = lunchEndSec - nowLocalSec;
+    } else if (inMainSession) {
+      status = 'open';
+      if (nowLocalMin < lunch.start.total) {
+        nextEvent = 'close';
+        // next event is actually lunch start — show until lunch
+        const lunchStartSec = lunch.start.total * 60;
+        secondsToNext = lunchStartSec - nowLocalSec;
+        nextEvent = 'close'; // simplified: show countdown to close only
+        secondsToNext = close.total * 60 - nowLocalSec;
       } else {
-        timeToNextEvent = `${minutesToLunch}분 후 점심휴장 시작`;
+        nextEvent = 'close';
+        secondsToNext = close.total * 60 - nowLocalSec;
       }
     } else {
-      // 점심시간 후 또는 점심시간이 없는 경우
+      status = 'closed';
+      nextEvent = 'open';
+      if (nowLocalMin < open.total) {
+        secondsToNext = open.total * 60 - nowLocalSec;
+      } else {
+        secondsToNext = (24 * 3600) - nowLocalSec + open.total * 60;
+      }
+    }
+  } else {
+    if (inMainSession) {
+      status = 'open';
       nextEvent = 'close';
-      const minutesToClose = closeTimeInMinutes - currentTimeInMinutes;
-      if (minutesToClose > 60) {
-        timeToNextEvent = `${Math.floor(minutesToClose / 60)}시간 ${minutesToClose % 60}분 후 폐장`;
+      secondsToNext = close.total * 60 - nowLocalSec;
+    } else {
+      status = 'closed';
+      nextEvent = 'open';
+      if (nowLocalMin < open.total) {
+        secondsToNext = open.total * 60 - nowLocalSec;
       } else {
-        timeToNextEvent = `${minutesToClose}분 후 폐장`;
+        secondsToNext = (24 * 3600) - nowLocalSec + open.total * 60;
       }
     }
-  } else {
-    nextEvent = 'open';
-    let minutesToOpen;
-    if (currentTimeInMinutes < openTimeInMinutes) {
-      minutesToOpen = openTimeInMinutes - currentTimeInMinutes;
-    } else {
-      // 다음날 개장
-      minutesToOpen = (24 * 60) - currentTimeInMinutes + openTimeInMinutes;
-    }
-    
-    if (minutesToOpen > 60) {
-      const hours = Math.floor(minutesToOpen / 60);
-      const minutes = minutesToOpen % 60;
-      timeToNextEvent = `${hours}시간 ${minutes}분 후 개장`;
-    } else {
-      timeToNextEvent = `${minutesToOpen}분 후 개장`;
-    }
   }
-  
+
+  const gmtOffsetNow = getTZOffsetHours(timezone);
+  const isDST = isDSTActive(timezone, gmtOffset);
+
+  const openKSTMin = localTimeToKSTMinutes(openTime, timezone);
+  const closeKSTMin = localTimeToKSTMinutes(closeTime, timezone);
+
+  // show +1 on closeKSTStr only when close is next day
+  const crossesMidnight = closeKSTMin < openKSTMin;
+
   return {
     exchange,
-    localTime: localTime.toLocaleString('ko-KR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    }),
-    kstTime: kstTime.toLocaleString('ko-KR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    }),
-    isOpen,
-    isLunchBreak,
-    nextEvent,
-    timeToNextEvent,
+    status,
+    localTimeStr: getLocalTimeStr(timezone),
+    kstOpenStr: kstMinutesToStr(openKSTMin),
+    kstCloseStr: kstMinutesToStr(closeKSTMin) + (crossesMidnight ? '+1' : ''),
+    localOpenStr: openTime,
+    localCloseStr: closeTime,
+    gmtOffsetNow,
     isDST,
-    currentGmtOffset
+    secondsToNext: Math.max(0, secondsToNext),
+    nextEvent,
+    timelineSegments: buildTimelineSegments(exchange),
   };
 }
 
-// 사용자 정의 알람 시간으로 체크하는 함수
-export function getMinutesToEventWithCustomTime(exchange: any, kstTime: Date, alertMinutes: number): { event: 'open' | 'close', minutes: number } | null {
-  const localTime = getLocalTime(exchange, kstTime);
-  
-  const [openHour, openMinute] = exchange.openTime.split(':').map(Number);
-  const [closeHour, closeMinute] = exchange.closeTime.split(':').map(Number);
-  
-  const currentHour = localTime.getHours();
-  const currentMinute = localTime.getMinutes();
-  const currentSecond = localTime.getSeconds();
-  const currentTimeInSeconds = currentHour * 3600 + currentMinute * 60 + currentSecond;
-  const openTimeInSeconds = openHour * 3600 + openMinute * 60;
-  const closeTimeInSeconds = closeHour * 3600 + closeMinute * 60;
-  
-  const alertSeconds = alertMinutes * 60;
-  
-  // 개장 체크
-  const secondsToOpen = openTimeInSeconds - currentTimeInSeconds;
-  if (secondsToOpen > 0 && secondsToOpen <= alertSeconds) {
-    return { event: 'open', minutes: Math.ceil(secondsToOpen / 60) };
-  }
-  
-  // 폐장 체크 (현재 개장 중이고 설정된 시간 이내 폐장)
-  const isCurrentlyOpen = currentTimeInSeconds >= openTimeInSeconds && currentTimeInSeconds < closeTimeInSeconds;
-  if (isCurrentlyOpen) {
-    const secondsToClose = closeTimeInSeconds - currentTimeInSeconds;
-    if (secondsToClose > 0 && secondsToClose <= alertSeconds) {
-      return { event: 'close', minutes: Math.ceil(secondsToClose / 60) };
-    }
-  }
-  
-  return null;
+/** Format seconds to "Xh Ym" or "Ym Zs". */
+export function formatCountdown(seconds: number): string {
+  if (seconds <= 0) return '0s';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s.toString().padStart(2, '0')}s`;
+  return `${s}s`;
 }
 
-// 기존 3분전 함수 (호환성 유지)
-export function getMinutesToEvent(exchange: any, kstTime: Date): { event: 'open' | 'close', minutes: number } | null {
-  return getMinutesToEventWithCustomTime(exchange, kstTime, 3);
-}
-
-export function getUpcomingAlertsWithSettings(exchanges: any[], alertSettings: AlertSettings[], kstTime: Date) {
-  const alerts: Array<{ exchangeId: string, exchangeName: string, event: 'open' | 'close', minutes: number }> = [];
-  
-  for (const setting of alertSettings) {
-    const exchange = exchanges.find(ex => ex.id === setting.exchangeId);
-    if (!exchange) continue;
-    
-    // 개장 알람 체크
-    if (setting.openAlertEnabled) {
-      const openAlert = getMinutesToEventWithCustomTime(exchange, kstTime, setting.openAlertMinutes);
-      if (openAlert && openAlert.event === 'open') {
-        alerts.push({
-          exchangeId: exchange.id,
-          exchangeName: exchange.nameKr,
-          event: 'open',
-          minutes: openAlert.minutes
-        });
-      }
-    }
-    
-    // 폐장 알람 체크
-    if (setting.closeAlertEnabled) {
-      const closeAlert = getMinutesToEventWithCustomTime(exchange, kstTime, setting.closeAlertMinutes);
-      if (closeAlert && closeAlert.event === 'close') {
-        alerts.push({
-          exchangeId: exchange.id,
-          exchangeName: exchange.nameKr,
-          event: 'close',
-          minutes: closeAlert.minutes
-        });
-      }
-    }
-  }
-  
-  return alerts;
-}
-
-// DST 기간 정보를 반환하는 함수
-export function getDSTInfo(exchange: Exchange, year: number): { start: Date, end: Date } | null {
-  if (!exchange.dst) {
-    return null;
-  }
-
-  const { startMonth, startWeek, startDay, endMonth, endWeek, endDay } = exchange.dst;
-  
-  const dstStart = getDSTDate(year, startMonth, startWeek, startDay);
-  const dstEnd = getDSTDate(year, endMonth, endWeek, endDay);
-
-  return { start: dstStart, end: dstEnd };
-}
-
-// 지역별 DST 정보 요약을 반환하는 함수
-export function getRegionalDSTInfo(exchanges: Exchange[], currentYear: number) {
-  const regions = {
-    europe: {
-      name: '유럽',
-      exchanges: [] as Exchange[],
-      dstPeriod: null as { start: Date, end: Date } | null
-    },
-    americas: {
-      name: '미주',
-      exchanges: [] as Exchange[],
-      dstPeriod: null as { start: Date, end: Date } | null
-    }
-  };
-
-  exchanges.forEach(exchange => {
-    if (exchange.region === 'europe' && exchange.dst) {
-      regions.europe.exchanges.push(exchange);
-      if (!regions.europe.dstPeriod) {
-        regions.europe.dstPeriod = getDSTInfo(exchange, currentYear);
-      }
-    } else if (exchange.region === 'americas' && exchange.dst) {
-      regions.americas.exchanges.push(exchange);
-      if (!regions.americas.dstPeriod) {
-        regions.americas.dstPeriod = getDSTInfo(exchange, currentYear);
-      }
-    }
-  });
-
-  return regions;
-}
-
-// 기존 함수 (호환성 유지)
-export function getUpcomingAlerts(exchanges: any[], selectedExchangeIds: string[], kstTime: Date) {
-  const alerts: Array<{ exchangeId: string, exchangeName: string, event: 'open' | 'close', minutes: number }> = [];
-  
-  const selectedExchanges = exchanges.filter(ex => selectedExchangeIds.includes(ex.id));
-  
-  for (const exchange of selectedExchanges) {
-    const alertInfo = getMinutesToEvent(exchange, kstTime);
-    if (alertInfo) {
-      alerts.push({
-        exchangeId: exchange.id,
-        exchangeName: exchange.nameKr,
-        event: alertInfo.event,
-        minutes: alertInfo.minutes
-      });
-    }
-  }
-  
-  return alerts;
+/** Format GMT offset as "+9:00" / "-5:00" / "+5:30". */
+export function formatGMT(offset: number): string {
+  const sign = offset >= 0 ? '+' : '-';
+  const abs = Math.abs(offset);
+  const h = Math.floor(abs).toString().padStart(2, '0');
+  const m = Math.round((abs % 1) * 60).toString().padStart(2, '0');
+  return `GMT${sign}${h}:${m}`;
 }
