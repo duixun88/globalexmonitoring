@@ -1,9 +1,10 @@
 import React from 'react';
-import { ExchangeStatus, Region } from '../../types/exchange';
+import { Exchange, ExchangeStatus, Region } from '../../types/exchange';
 import { ExchangeCard } from './ExchangeCard';
 
 interface StatusGridProps {
   statuses: ExchangeStatus[];
+  onExchangeClick: (exchange: Exchange) => void;
 }
 
 const REGION_LABELS: Record<Region, string> = {
@@ -18,7 +19,7 @@ const REGION_COLORS: Record<Region, string> = {
   americas: 'text-orange-400',
 };
 
-export function StatusGrid({ statuses }: StatusGridProps) {
+export function StatusGrid({ statuses, onExchangeClick }: StatusGridProps) {
   const regions: Region[] = ['asia', 'europe', 'americas'];
 
   return (
@@ -32,9 +33,13 @@ export function StatusGrid({ statuses }: StatusGridProps) {
               {REGION_LABELS[region]}
               <span className="ml-2 text-gray-600 font-normal">{group.length}개</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2">
               {group.map(s => (
-                <ExchangeCard key={s.exchange.id} status={s} />
+                <ExchangeCard
+                  key={s.exchange.id}
+                  status={s}
+                  onClick={() => onExchangeClick(s.exchange)}
+                />
               ))}
             </div>
           </div>

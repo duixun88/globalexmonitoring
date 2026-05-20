@@ -1,10 +1,11 @@
 import React, { useRef, useEffect } from 'react';
-import { ExchangeStatus, Region } from '../../types/exchange';
+import { Exchange, ExchangeStatus, Region } from '../../types/exchange';
 import { ExchangeRow } from './ExchangeRow';
 
 interface TimelineProps {
   statuses: ExchangeStatus[];
-  currentKSTMin: number; // 0–1439
+  currentKSTMin: number;
+  onExchangeClick: (exchange: Exchange) => void;
 }
 
 const REGION_LABELS: Record<Region, string> = {
@@ -19,16 +20,15 @@ const REGION_COLORS: Record<Region, string> = {
   americas: 'text-orange-400 border-orange-900',
 };
 
-const HOUR_MARKS = Array.from({ length: 25 }, (_, i) => i); // 0..24
+const HOUR_MARKS = Array.from({ length: 25 }, (_, i) => i);
 
 function pct(min: number): string {
   return `${((min / 1440) * 100).toFixed(4)}%`;
 }
 
-export function Timeline({ statuses, currentKSTMin }: TimelineProps) {
+export function Timeline({ statuses, currentKSTMin, onExchangeClick }: TimelineProps) {
   const markerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll current-time marker into view on mount
   useEffect(() => {
     markerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }, []);
@@ -83,6 +83,7 @@ export function Timeline({ statuses, currentKSTMin }: TimelineProps) {
                   key={s.exchange.id}
                   status={s}
                   currentKSTMin={currentKSTMin}
+                  onClick={() => onExchangeClick(s.exchange)}
                 />
               ))}
             </div>
@@ -106,6 +107,7 @@ export function Timeline({ statuses, currentKSTMin }: TimelineProps) {
         </span>
         <span className="ml-auto text-sky-400 font-semibold text-[9px]">DST</span>
         <span>= 서머타임 적용 중</span>
+        <span className="text-gray-600">· 행 클릭 시 세부 정보</span>
       </div>
     </div>
   );

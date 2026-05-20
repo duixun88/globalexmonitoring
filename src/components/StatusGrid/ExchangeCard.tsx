@@ -4,24 +4,25 @@ import { formatCountdown, formatGMT } from '../../utils/timeUtils';
 
 interface ExchangeCardProps {
   status: ExchangeStatus;
+  onClick: () => void;
 }
 
 const STATUS_STYLES = {
   open: {
     badge: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
-    border: 'border-emerald-500/20',
+    border: 'border-emerald-500/20 hover:border-emerald-400/40',
     dot: 'bg-emerald-400 animate-pulse',
     label: 'OPEN',
   },
   lunch: {
     badge: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
-    border: 'border-amber-500/20',
+    border: 'border-amber-500/20 hover:border-amber-400/40',
     dot: 'bg-amber-400',
     label: 'LUNCH',
   },
   closed: {
     badge: 'bg-gray-700/40 text-gray-500 border border-gray-700',
-    border: 'border-gray-700/40',
+    border: 'border-gray-700/40 hover:border-gray-600',
     dot: 'bg-gray-600',
     label: 'CLOSED',
   },
@@ -33,7 +34,7 @@ const NEXT_EVENT_LABEL = {
   lunch_end: '점심 재개',
 };
 
-export function ExchangeCard({ status }: ExchangeCardProps) {
+export function ExchangeCard({ status, onClick }: ExchangeCardProps) {
   const {
     exchange,
     status: mktStatus,
@@ -49,9 +50,14 @@ export function ExchangeCard({ status }: ExchangeCardProps) {
   } = status;
 
   const style = STATUS_STYLES[mktStatus];
+  const hasPhases = exchange.tradingPhases && exchange.tradingPhases.length > 0;
 
   return (
-    <div className={`bg-gray-900 rounded-lg p-3 border ${style.border} hover:border-gray-600 transition-colors`}>
+    <div
+      onClick={onClick}
+      className={`bg-gray-900 rounded-lg p-3 border ${style.border} transition-all cursor-pointer hover:shadow-lg hover:scale-[1.01]`}
+      title={hasPhases ? `${exchange.nameKr} 세부 세션 보기` : undefined}
+    >
       {/* Top row: flag + name + status */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-1.5">
@@ -59,6 +65,9 @@ export function ExchangeCard({ status }: ExchangeCardProps) {
           <div>
             <div className="text-xs font-bold text-gray-100 uppercase tracking-wide">
               {exchange.id}
+              {hasPhases && (
+                <span className="ml-1 text-[8px] text-gray-600">ⓘ</span>
+              )}
             </div>
             <div className="text-[10px] text-gray-500 leading-none">{exchange.nameKr}</div>
           </div>
