@@ -46,6 +46,8 @@ export default function App() {
   const { getInfo, saveInfo } = useExchangeInfo();
   const { pins, toggle: togglePin } = usePins();
   const { hidden, toggle: toggleVis, showAll, setAllHidden } = useExchangeVisibility();
+  const authorId = user?.email ? user.email.split('@')[0] : undefined;
+  const addNoteAuth = (exId: string, date: string, body: string) => addNote(exId, date, body, authorId);
   const [kstMin, setKstMin] = useState(getKSTMinutesNow);
   const [isDark, setIsDark] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('timeline');
@@ -220,7 +222,7 @@ export default function App() {
           onSaveInfo={saveInfo}
           notes={notesFor(detailExchange.id)}
           isEditor={isEditor}
-          onAddNote={addNote}
+          onAddNote={addNoteAuth}
           onDeleteNote={deleteNote}
         />
       )}
@@ -231,6 +233,7 @@ export default function App() {
           notes={notes}
           exchanges={exchanges}
           isEditor={isEditor}
+          onAdd={addNoteAuth}
           onDelete={deleteNote}
           onClose={() => setShowNotes(false)}
         />

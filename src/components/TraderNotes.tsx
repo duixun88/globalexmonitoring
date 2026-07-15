@@ -78,6 +78,9 @@ export function TraderNotes({ exchangeId, notes, isEditor, onAdd, onDelete }: Pr
               {n.noteDate}
             </span>
             <div className="text-xs text-gray-200 leading-relaxed whitespace-pre-wrap flex-1 min-w-0">{n.body}</div>
+            {n.author && (
+              <span className="text-[10px] text-gray-500 shrink-0 mt-0.5 font-mono" title="작성자">✎ {n.author}</span>
+            )}
             {isEditor && (
               <button onClick={() => onDelete(n.id)} title="삭제" className="text-gray-600 hover:text-rose-400 text-xs shrink-0 leading-none mt-0.5">
                 ✕
