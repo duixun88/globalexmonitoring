@@ -131,7 +131,7 @@ export default function App() {
         </div>
       </div>
 
-      <main className="max-w-screen-2xl mx-auto px-4 py-4 space-y-6">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-5 py-5 space-y-6">
         {/* KST scrubber — timeline & cards only */}
         {(activeTab === 'timeline' || activeTab === 'cards') && (
           <Scrubber viewMin={viewMin} attached={attached} onScrub={handleScrub} onNow={handleNow} />

@@ -63,7 +63,7 @@ export function Timeline({ statuses, currentKSTMin, onExchangeClick, pins, onTog
   return (
     <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
       {/* Hour axis */}
-      <div className="flex items-end gap-2 mb-1 pl-[14.5rem] pr-[13.5rem]">
+      <div className="flex items-end gap-2 mb-1 pl-[14.875rem] pr-[13.875rem]">
         <div className="relative flex-1 h-4">
           {HOUR_MARKS.map(h => (
             <span
@@ -78,15 +78,17 @@ export function Timeline({ statuses, currentKSTMin, onExchangeClick, pins, onTog
       </div>
 
       {/* Current time label */}
-      <div className="relative pl-[14.5rem] pr-[13.5rem] mb-1.5 h-6">
-        <div
-          ref={markerRef}
-          className="absolute flex flex-col items-center"
-          style={{ left: `calc(${pct(currentKSTMin)} )` }}
-        >
-          <span className="text-[15px] leading-none font-bold text-red-400 tabular-nums -translate-x-1/2 whitespace-nowrap drop-shadow">
-            <span className="text-[11px]">▼</span> {Math.floor(currentKSTMin / 60).toString().padStart(2, '0')}:{(currentKSTMin % 60).toString().padStart(2, '0')}
-          </span>
+      <div className="flex mb-1.5 pl-[14.875rem] pr-[13.875rem]">
+        <div className="relative flex-1 h-6">
+          <div
+            ref={markerRef}
+            className="absolute flex flex-col items-center"
+            style={{ left: pct(currentKSTMin) }}
+          >
+            <span className="text-[15px] leading-none font-bold text-red-400 tabular-nums -translate-x-1/2 whitespace-nowrap drop-shadow">
+              <span className="text-[11px]">▼</span> {Math.floor(currentKSTMin / 60).toString().padStart(2, '0')}:{(currentKSTMin % 60).toString().padStart(2, '0')}
+            </span>
+          </div>
         </div>
       </div>
 

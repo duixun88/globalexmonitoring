@@ -34,11 +34,11 @@ export function Header({
   }).format(new Date());
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-2 bg-gray-950 border-b border-gray-800 select-none">
+    <header className="sticky top-0 z-50 flex items-center justify-between px-5 py-3 bg-gray-950 border-b border-gray-800 select-none">
       {/* Left: KST clock */}
       <div className="flex items-baseline gap-3">
         <span className="text-xs font-semibold text-gray-500 tracking-widest uppercase">KST</span>
-        <span className="text-2xl font-mono font-bold text-white tabular-nums tracking-tight">
+        <span className="text-3xl font-mono font-bold text-gray-100 tabular-nums tracking-tight">
           {hms}
         </span>
         <span className="text-xs text-gray-500">{today}</span>

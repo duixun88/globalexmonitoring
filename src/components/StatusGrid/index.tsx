@@ -34,7 +34,7 @@ const byKstOpen = (a: ExchangeStatus, b: ExchangeStatus) => kstOpenMin(a) - kstO
 
 export function StatusGrid({ statuses, onExchangeClick, pins, onTogglePin }: StatusGridProps) {
   const regions: Region[] = ['asia', 'middleeast', 'europe', 'africa', 'americas'];
-  const gridCls = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2';
+  const gridCls = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3';
 
   const renderCard = (s: ExchangeStatus) => (
     <ExchangeCard

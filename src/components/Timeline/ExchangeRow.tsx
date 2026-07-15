@@ -45,7 +45,7 @@ export function ExchangeRow({ status, currentKSTMin, onClick, isPinned, onToggle
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-2 py-1 group rounded px-1 transition-colors ${hasPhases ? 'cursor-pointer hover:bg-gray-800/60' : 'cursor-default'}`}
+      className={`flex items-center gap-2 py-1.5 group rounded-lg px-1.5 transition-colors ${hasPhases ? 'cursor-pointer hover:bg-gray-800/60' : 'cursor-default'}`}
       title={hasPhases ? `${exchange.nameKr} 상세 보기` : undefined}
     >
       {/* Exchange label — fixed width */}

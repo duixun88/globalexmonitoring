@@ -1,73 +1,160 @@
-/* Trader dark theme base */
-*, *::before, *::after {
-  box-sizing: border-box;
+/* ============================================================
+   디자인 토큰 (토스증권 톤) — 이 블록만 고치면 앱 전체 반영
+   · 컴포넌트는 Tailwind 유틸(gray-*, rounded-*, text-[Npx])을 그대로 쓰고
+     여기서 토큰(CSS 변수)에 연결한다.
+   ============================================================ */
+:root {
+  /* 폰트 */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo',
+               'Malgun Gothic', 'Noto Sans KR', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --fs-scale: 1;        /* 전체 폰트/여백 배율 */
+
+  /* 라운드(부드러운 모서리) */
+  --r:    8px;
+  --r-md: 10px;
+  --r-lg: 13px;
+  --r-xl: 16px;
+
+  /* ── 다크(기본) — 순검정 대신 부드러운 뉴트럴 다크, 카드는 면 대비로 위계 ── */
+  --c-bg:       #0b0f17;
+  --c-panel:    #161c27;
+  --c-surface:  #212938;
+  --c-surface2: #2d3547;
+  --c-raised:   #3d4657;
+  --c-500:      #6b7482;
+  --c-400:      #9aa4b2;
+
+  --text-100: #f2f5f9;   /* 강조 */
+  --text-200: #dfe4ec;
+  --text-300: #c2cad6;
+  --text-400: #98a3b2;   /* muted (AA 확보) */
+  --text-500: #828e9e;
+  --text-600: #737f8f;
+  --text-700: #66707f;
+
+  --line-800: #1e2634;   /* 아주 옅은 구분선 */
+  --line-700: #2b3342;
+  --line-600: #3a4556;
 }
 
-html {
-  font-size: 14px;
+/* ── 라이트 — 오프화이트 배경 + 흰 카드로 띄움, muted 가독성 확보 ── */
+html:not(.dark) {
+  --c-bg:       #eef1f6;
+  --c-panel:    #ffffff;
+  --c-surface:  #f2f5f9;
+  --c-surface2: #e6ebf2;
+  --c-raised:   #d6dde7;
+  --c-500:      #94a3b8;
+  --c-400:      #cbd5e1;
+
+  --text-100: #15213a;
+  --text-200: #27344b;
+  --text-300: #3f4c61;
+  --text-400: #586374;
+  --text-500: #6b7789;
+  --text-600: #808c9d;
+  --text-700: #8b97a8;
+
+  --line-800: #e6ebf2;
+  --line-700: #d7dee7;
+  --line-600: #c6cfda;
 }
+
+/* ============================================================
+   Base
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { font-size: calc(14px * var(--fs-scale)); }
 
 body {
   margin: 0;
-  background-color: #030712; /* gray-950 */
-  color: #f1f5f9;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--c-bg);
+  color: var(--text-100);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+input, textarea, select, button { font-family: inherit; }
 
-/* Monospace numbers */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #111827; }
-::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+.font-mono { font-family: var(--font-mono) !important; }
 
 /* ============================================================
-   #2 다크모드: 어두운 muted 텍스트 가독성 개선
+   Tailwind 유틸 → 토큰 연결 (색)
    ============================================================ */
-html.dark .text-gray-600 { color: #828d9c !important; }
-html.dark .text-gray-700 { color: #6f7885 !important; }
+.bg-gray-950 { background-color: var(--c-bg) !important; }
+.bg-gray-900 { background-color: var(--c-panel) !important; }
+.bg-gray-800 { background-color: var(--c-surface) !important; }
+.bg-gray-700 { background-color: var(--c-surface2) !important; }
+.bg-gray-600 { background-color: var(--c-raised) !important; }
+.bg-gray-500 { background-color: var(--c-500) !important; }
+.bg-gray-400 { background-color: var(--c-400) !important; }
+.bg-gray-100 { background-color: var(--c-bg) !important; }
+
+.bg-gray-900\/60 { background-color: color-mix(in srgb, var(--c-panel) 60%, transparent) !important; }
+.bg-gray-900\/40 { background-color: color-mix(in srgb, var(--c-panel) 40%, transparent) !important; }
+.bg-gray-800\/60 { background-color: color-mix(in srgb, var(--c-surface) 60%, transparent) !important; }
+.bg-gray-800\/50 { background-color: color-mix(in srgb, var(--c-surface) 50%, transparent) !important; }
+.bg-gray-800\/40 { background-color: color-mix(in srgb, var(--c-surface) 40%, transparent) !important; }
+.bg-gray-700\/40 { background-color: color-mix(in srgb, var(--c-surface2) 40%, transparent) !important; }
+.bg-gray-500\/15 { background-color: color-mix(in srgb, var(--c-500) 15%, transparent) !important; }
+
+.text-gray-100 { color: var(--text-100) !important; }
+.text-gray-200 { color: var(--text-200) !important; }
+.text-gray-300 { color: var(--text-300) !important; }
+.text-gray-400 { color: var(--text-400) !important; }
+.text-gray-500 { color: var(--text-500) !important; }
+.text-gray-600 { color: var(--text-600) !important; }
+.text-gray-700 { color: var(--text-700) !important; }
+.text-gray-900 { color: var(--text-100) !important; }
+
+.border-gray-800 { border-color: var(--line-800) !important; }
+.border-gray-700 { border-color: var(--line-700) !important; }
+.border-gray-600 { border-color: var(--line-600) !important; }
+.border-gray-800\/70 { border-color: color-mix(in srgb, var(--line-800) 80%, transparent) !important; }
+.border-gray-800\/50 { border-color: color-mix(in srgb, var(--line-800) 65%, transparent) !important; }
+.border-gray-700\/40 { border-color: color-mix(in srgb, var(--line-700) 55%, transparent) !important; }
 
 /* ============================================================
-   #3 라이트모드 재매핑 (앱이 다크 고정 색을 쓰므로 라이트에서 치환)
+   부드러운 모서리 (토스 톤) — rounded 유틸 중앙 조정
    ============================================================ */
-html:not(.dark) body { background-color: #eef1f6; color: #0f172a; }
-html:not(.dark) ::-webkit-scrollbar-track { background: #e2e8f0; }
-html:not(.dark) ::-webkit-scrollbar-thumb { background: #cbd5e1; }
-html:not(.dark) ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.rounded    { border-radius: var(--r) !important; }
+.rounded-md { border-radius: var(--r-md) !important; }
+.rounded-lg { border-radius: var(--r-lg) !important; }
+.rounded-xl { border-radius: var(--r-xl) !important; }
+/* rounded-sm / rounded-full / rounded-[..] (플래그·pill·마커)는 그대로 둔다 */
 
-/* backgrounds */
-html:not(.dark) .bg-gray-950 { background-color: #eef1f6 !important; }
-html:not(.dark) .bg-gray-900 { background-color: #ffffff !important; }
-html:not(.dark) .bg-gray-900\/60 { background-color: rgba(255,255,255,0.7) !important; }
-html:not(.dark) .bg-gray-900\/40 { background-color: rgba(255,255,255,0.5) !important; }
-html:not(.dark) .bg-gray-800 { background-color: #eef2f7 !important; }
-html:not(.dark) .bg-gray-800\/60 { background-color: rgba(226,232,240,0.6) !important; }
-html:not(.dark) .bg-gray-800\/50 { background-color: rgba(226,232,240,0.55) !important; }
-html:not(.dark) .bg-gray-800\/40 { background-color: rgba(226,232,240,0.45) !important; }
-html:not(.dark) .bg-gray-700 { background-color: #dbe2ea !important; }
-html:not(.dark) .bg-gray-700\/40 { background-color: rgba(203,213,225,0.4) !important; }
-html:not(.dark) .bg-gray-600 { background-color: #cbd5e1 !important; }
-html:not(.dark) .bg-gray-500\/15 { background-color: rgba(100,116,139,0.14) !important; }
-html:not(.dark) .bg-gray-100 { background-color: #eef1f6 !important; }
+/* ============================================================
+   상태 색 — 라이트모드에서 흰 배경 대비 보정 (다크는 Tailwind 기본 유지)
+   ============================================================ */
+html:not(.dark) .text-emerald-400,
+html:not(.dark) .text-emerald-300 { color: #0a9d54 !important; }
+html:not(.dark) .text-rose-400,
+html:not(.dark) .text-rose-300    { color: #e11d48 !important; }
+html:not(.dark) .text-red-400     { color: #dc2626 !important; }
+html:not(.dark) .text-amber-400,
+html:not(.dark) .text-amber-300   { color: #b7791f !important; }
+html:not(.dark) .text-sky-400,
+html:not(.dark) .text-sky-300     { color: #0284c7 !important; }
+html:not(.dark) .text-violet-400  { color: #7c3aed !important; }
+html:not(.dark) .text-orange-400  { color: #ea580c !important; }
+html:not(.dark) .text-teal-400    { color: #0d9488 !important; }
 
-/* text */
-html:not(.dark) .text-gray-100 { color: #0f172a !important; }
-html:not(.dark) .text-gray-200 { color: #1e293b !important; }
-html:not(.dark) .text-gray-300 { color: #334155 !important; }
-html:not(.dark) .text-gray-400 { color: #475569 !important; }
-html:not(.dark) .text-gray-500 { color: #64748b !important; }
-html:not(.dark) .text-gray-600 { color: #8a97a8 !important; }
-html:not(.dark) .text-gray-700 { color: #8a97a8 !important; }
+/* ============================================================
+   고정 px 폰트 크기 → 전체 배율(--fs-scale) 적용
+   ============================================================ */
+.text-\[8px\]  { font-size: calc(8px  * var(--fs-scale)) !important; }
+.text-\[9px\]  { font-size: calc(9px  * var(--fs-scale)) !important; }
+.text-\[10px\] { font-size: calc(10px * var(--fs-scale)) !important; }
+.text-\[11px\] { font-size: calc(11px * var(--fs-scale)) !important; }
+.text-\[12px\] { font-size: calc(12px * var(--fs-scale)) !important; }
+.text-\[15px\] { font-size: calc(15px * var(--fs-scale)) !important; }
 
-/* borders */
-html:not(.dark) .border-gray-800 { border-color: #e2e8f0 !important; }
-html:not(.dark) .border-gray-800\/70 { border-color: rgba(226,232,240,0.85) !important; }
-html:not(.dark) .border-gray-800\/50 { border-color: rgba(226,232,240,0.7) !important; }
-html:not(.dark) .border-gray-700 { border-color: #d3dae2 !important; }
-html:not(.dark) .border-gray-700\/40 { border-color: rgba(203,213,225,0.5) !important; }
-html:not(.dark) .border-gray-600 { border-color: #cbd5e1 !important; }
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--c-surface2); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--c-raised); }

@@ -25,7 +25,7 @@ export function ActionBand({ statuses, onExchangeClick }: Props) {
   ].filter(g => g.items.length > 0);
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 flex flex-wrap gap-x-6 gap-y-2 items-start">
+    <div className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4 flex flex-wrap gap-x-6 gap-y-3 items-start">
       <div className="text-[11px] font-bold text-gray-500 shrink-0 pt-1">지금 ▸</div>
       {groups.length === 0 ? (
         <span className="text-xs text-gray-600 pt-0.5">열린 시장이 없습니다.</span>

@@ -67,11 +67,11 @@ export function ExchangeCard({ status, onClick, isPinned, onTogglePin }: Exchang
   return (
     <div
       onClick={onClick}
-      className={`bg-gray-900 rounded-lg p-3 border ${style.border} transition-all cursor-pointer hover:shadow-lg hover:scale-[1.01]`}
+      className={`bg-gray-900 rounded-xl p-4 border ${style.border} transition-colors cursor-pointer`}
       title={hasPhases ? `${exchange.nameKr} 세부 세션 보기` : undefined}
     >
       {/* Top row: flag + name + status */}
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-1.5">
           {onTogglePin && (
             <button
@@ -94,7 +94,7 @@ export function ExchangeCard({ status, onClick, isPinned, onTogglePin }: Exchang
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${style.badge} flex items-center gap-1`}>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${style.badge} flex items-center gap-1`}>
             <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
             {style.label}
           </span>
@@ -111,7 +111,7 @@ export function ExchangeCard({ status, onClick, isPinned, onTogglePin }: Exchang
       </div>
 
       {/* Times */}
-      <div className="space-y-1 mb-2">
+      <div className="space-y-1.5 mb-2.5">
         <div className="flex justify-between items-center">
           <span className="text-[10px] text-gray-500">KST</span>
           <span className="text-[11px] font-mono text-gray-200 tabular-nums">
@@ -133,7 +133,7 @@ export function ExchangeCard({ status, onClick, isPinned, onTogglePin }: Exchang
       </div>
 
       {/* Divider */}
-      <div className="border-t border-gray-800 my-2" />
+      <div className="border-t border-gray-800 my-2.5" />
 
       {/* Countdown + GMT (or holiday note) */}
       <div className="flex justify-between items-center">
@@ -146,12 +146,12 @@ export function ExchangeCard({ status, onClick, isPinned, onTogglePin }: Exchang
           </div>
         ) : (
           <div>
-            <div className="text-[9px] text-gray-600">
+            <div className="text-[10px] text-gray-500">
               {NEXT_EVENT_LABEL[nextEvent]}
               {isEarlyClose && <span className="ml-1 text-amber-400">· 반장</span>}
             </div>
-            <div className={`text-sm font-bold font-mono tabular-nums ${
-              mktStatus === 'open' ? 'text-gray-300' : 'text-emerald-400'
+            <div className={`text-base font-bold font-mono tabular-nums ${
+              mktStatus === 'open' ? 'text-gray-200' : 'text-emerald-400'
             }`}>
               {formatCountdown(secondsToNext)}
             </div>
