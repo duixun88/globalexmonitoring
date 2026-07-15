@@ -6,7 +6,10 @@ interface Props {
   notes: Note[];              // sorted date desc from useNotes
   exchanges: Exchange[];
   isEditor: boolean;
+  authorId?: string;
+  isMaster?: boolean;
   onAdd?: (exchangeId: string, date: string, body: string) => Promise<{ error?: string }>;
+  onUpdate?: (id: string, body: string, date?: string) => Promise<{ error?: string }>;
   onDelete: (id: string) => Promise<{ error?: string } | void>;
   onClose: () => void;
 }
@@ -19,7 +22,7 @@ const todayISO = () => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
-export function NotesView({ notes, exchanges, isEditor, onAdd, onDelete, onClose }: Props) {
+export function NotesView({ notes, exchanges, isEditor, authorId, isMaster, onAdd, onUpdate, onDelete, onClose }: Props) {
   const [mode, setMode] = useState<'ex' | 'date'>('ex');
   const [filter, setFilter] = useState<string>('all');
   const [addEx, setAddEx] = useState<string>('');
@@ -27,6 +30,20 @@ export function NotesView({ notes, exchanges, isEditor, onAdd, onDelete, onClose
   const [addBody, setAddBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState('');
+  const [editDate, setEditDate] = useState('');
+
+  const canModify = (n: Note) => isEditor && (!!isMaster || (!!n.author && n.author === authorId));
+  function startEdit(n: Note) { setEditingId(n.id); setEditBody(n.body); setEditDate(n.noteDate); setErr(''); }
+  async function saveEdit(id: string) {
+    if (!onUpdate || !editBody.trim()) return;
+    setBusy(true); setErr('');
+    const { error } = await onUpdate(id, editBody.trim(), editDate);
+    setBusy(false);
+    if (error) { setErr(error); return; }
+    setEditingId(null);
+  }
 
   const handleKey = useCallback((e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }, [onClose]);
   useEffect(() => {
@@ -176,6 +193,19 @@ export function NotesView({ notes, exchanges, isEditor, onAdd, onDelete, onClose
               <div className="space-y-1.5">
                 {g.items.map(n => {
                   const ex = exById[n.exchangeId];
+                  if (editingId === n.id) {
+                    return (
+                      <div key={n.id} className="bg-gray-900 border border-sky-700/50 rounded-lg p-2.5">
+                        <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="bg-gray-800 border border-gray-700 text-gray-200 text-[11px] rounded px-2 py-1 font-mono mb-1.5 focus:outline-none focus:border-sky-500" />
+                        <textarea value={editBody} onChange={e => setEditBody(e.target.value)} className="w-full min-h-[56px] bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded px-2.5 py-2 leading-relaxed focus:outline-none focus:border-sky-500" />
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <button onClick={() => saveEdit(n.id)} disabled={busy} className="bg-sky-600 hover:bg-sky-500 disabled:opacity-40 text-white text-xs font-bold rounded px-3 py-1">저장</button>
+                          <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-gray-200 text-xs px-2">취소</button>
+                          {err && <span className="text-[10px] text-rose-400">{err}</span>}
+                        </div>
+                      </div>
+                    );
+                  }
                   return (
                     <div key={n.id} className="flex items-start gap-3 bg-gray-900 border border-gray-800 rounded-lg px-3 py-2.5">
                       {mode === 'ex' ? (
@@ -188,10 +218,13 @@ export function NotesView({ notes, exchanges, isEditor, onAdd, onDelete, onClose
                       )}
                       <div className="text-xs text-gray-200 leading-relaxed whitespace-pre-wrap flex-1 min-w-0">{n.body}</div>
                       {n.author && (
-                        <span className="text-[10px] text-gray-500 shrink-0 mt-0.5 font-mono self-center" title="작성자">✎ {n.author}</span>
+                        <span className="text-[10px] text-gray-500 shrink-0 self-center font-mono" title="작성자">{n.author}</span>
                       )}
-                      {isEditor && (
-                        <button onClick={() => onDelete(n.id)} title="삭제" className="text-gray-600 hover:text-rose-400 text-xs shrink-0 leading-none mt-0.5 self-center">✕</button>
+                      {canModify(n) && (
+                        <span className="flex gap-1.5 shrink-0 self-center">
+                          <button onClick={() => startEdit(n)} title="편집" className="text-gray-500 hover:text-sky-400 text-xs leading-none">✎</button>
+                          <button onClick={() => onDelete(n.id)} title="삭제" className="text-gray-500 hover:text-rose-400 text-xs leading-none">✕</button>
+                        </span>
                       )}
                     </div>
                   );

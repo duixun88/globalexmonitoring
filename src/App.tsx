@@ -42,11 +42,13 @@ export default function App() {
   const { getHoliday } = useHolidays();
   const statuses = useExchangeStatuses(exchanges, tick, getHoliday);
   const { user, isEditor, signIn, signOut } = useAuth();
-  const { notes, notesFor, addNote, deleteNote } = useNotes();
+  const { notes, notesFor, addNote, updateNote, deleteNote } = useNotes();
   const { getInfo, saveInfo } = useExchangeInfo();
   const { pins, toggle: togglePin } = usePins();
   const { hidden, toggle: toggleVis, showAll, setAllHidden } = useExchangeVisibility();
   const authorId = user?.email ? user.email.split('@')[0] : undefined;
+  const MASTER_IDS = (import.meta.env.VITE_MASTER_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+  const isMaster = !!authorId && MASTER_IDS.includes(authorId);
   const addNoteAuth = (exId: string, date: string, body: string) => addNote(exId, date, body, authorId);
   const [kstMin, setKstMin] = useState(getKSTMinutesNow);
   const [isDark, setIsDark] = useState(true);
@@ -222,7 +224,10 @@ export default function App() {
           onSaveInfo={saveInfo}
           notes={notesFor(detailExchange.id)}
           isEditor={isEditor}
+          authorId={authorId}
+          isMaster={isMaster}
           onAddNote={addNoteAuth}
+          onUpdateNote={updateNote}
           onDeleteNote={deleteNote}
         />
       )}
@@ -233,7 +238,10 @@ export default function App() {
           notes={notes}
           exchanges={exchanges}
           isEditor={isEditor}
+          authorId={authorId}
+          isMaster={isMaster}
           onAdd={addNoteAuth}
+          onUpdate={updateNote}
           onDelete={deleteNote}
           onClose={() => setShowNotes(false)}
         />

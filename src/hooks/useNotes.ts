@@ -45,6 +45,18 @@ export function useNotes() {
     [refresh],
   );
 
+  const updateNote = useCallback(
+    async (id: string, body: string, noteDate?: string) => {
+      if (!supabase) return { error: 'Supabase 미설정' };
+      const patch: Record<string, any> = { body };
+      if (noteDate) patch.note_date = noteDate;
+      const { error } = await supabase.from('exchange_notes').update(patch).eq('id', id);
+      if (!error) await refresh();
+      return { error: error?.message };
+    },
+    [refresh],
+  );
+
   const deleteNote = useCallback(
     async (id: string) => {
       if (!supabase) return { error: 'Supabase 미설정' };
@@ -60,5 +72,5 @@ export function useNotes() {
     [notes],
   );
 
-  return { notes, notesFor, addNote, deleteNote, ready, refresh };
+  return { notes, notesFor, addNote, updateNote, deleteNote, ready, refresh };
 }

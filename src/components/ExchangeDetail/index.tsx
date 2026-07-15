@@ -16,7 +16,10 @@ interface ExchangeDetailProps {
   onSaveInfo: (id: string, info: ExchangeInfo) => Promise<{ error?: string }>;
   notes: Note[];
   isEditor: boolean;
+  authorId?: string;
+  isMaster?: boolean;
   onAddNote: (exchangeId: string, date: string, body: string) => Promise<{ error?: string }>;
+  onUpdateNote: (id: string, body: string, date?: string) => Promise<{ error?: string }>;
   onDeleteNote: (id: string) => Promise<{ error?: string } | void>;
 }
 
@@ -152,7 +155,7 @@ function MiniTimeline({ phases, gmtOffsetHours }: { phases: TradingPhase[]; gmtO
 
 // ── Main component ───────────────────────────────────────────────────
 
-export function ExchangeDetail({ exchange, onClose, viewMin, attached, holiday, info, onSaveInfo, notes, isEditor, onAddNote, onDeleteNote }: ExchangeDetailProps) {
+export function ExchangeDetail({ exchange, onClose, viewMin, attached, holiday, info, onSaveInfo, notes, isEditor, authorId, isMaster, onAddNote, onUpdateNote, onDeleteNote }: ExchangeDetailProps) {
   const { tradingPhases, timezone } = exchange;
   const gmtOffsetNow = getTZOffsetHours(timezone);
   const gmtLabel = gmtOffsetNow >= 0 ? `GMT+${gmtOffsetNow}` : `GMT${gmtOffsetNow}`;
@@ -366,7 +369,10 @@ export function ExchangeDetail({ exchange, onClose, viewMin, attached, holiday, 
               exchangeId={exchange.id}
               notes={notes}
               isEditor={isEditor}
+              authorId={authorId}
+              isMaster={isMaster}
               onAdd={onAddNote}
+              onUpdate={onUpdateNote}
               onDelete={onDeleteNote}
             />
           </div>

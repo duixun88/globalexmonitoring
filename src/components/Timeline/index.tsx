@@ -78,14 +78,14 @@ export function Timeline({ statuses, currentKSTMin, onExchangeClick, pins, onTog
       </div>
 
       {/* Current time label */}
-      <div className="relative pl-[14.5rem] pr-[13.5rem] mb-1 h-4">
+      <div className="relative pl-[14.5rem] pr-[13.5rem] mb-1.5 h-6">
         <div
           ref={markerRef}
           className="absolute flex flex-col items-center"
           style={{ left: `calc(${pct(currentKSTMin)} )` }}
         >
-          <span className="text-[9px] font-bold text-red-400 tabular-nums -translate-x-1/2 whitespace-nowrap">
-            ▼ {Math.floor(currentKSTMin / 60).toString().padStart(2, '0')}:{(currentKSTMin % 60).toString().padStart(2, '0')}
+          <span className="text-[15px] leading-none font-bold text-red-400 tabular-nums -translate-x-1/2 whitespace-nowrap drop-shadow">
+            <span className="text-[11px]">▼</span> {Math.floor(currentKSTMin / 60).toString().padStart(2, '0')}:{(currentKSTMin % 60).toString().padStart(2, '0')}
           </span>
         </div>
       </div>
