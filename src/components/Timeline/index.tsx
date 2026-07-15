@@ -6,34 +6,59 @@ interface TimelineProps {
   statuses: ExchangeStatus[];
   currentKSTMin: number;
   onExchangeClick: (exchange: Exchange) => void;
+  pins: Set<string>;
+  onTogglePin: (id: string) => void;
 }
 
 const REGION_LABELS: Record<Region, string> = {
   asia: 'ASIA',
+  middleeast: 'MIDDLE EAST',
   europe: 'EUROPE',
+  africa: 'AFRICA',
   americas: 'AMERICAS',
 };
 
 const REGION_COLORS: Record<Region, string> = {
   asia: 'text-sky-400 border-sky-900',
+  middleeast: 'text-teal-400 border-teal-900',
   europe: 'text-violet-400 border-violet-900',
+  africa: 'text-amber-400 border-amber-900',
   americas: 'text-orange-400 border-orange-900',
 };
 
 const HOUR_MARKS = Array.from({ length: 25 }, (_, i) => i);
 
+/** KST regular-open minute (for sorting earliest-open first within a region). */
+function kstOpenMin(s: ExchangeStatus): number {
+  const [h, m] = s.kstOpenStr.replace('+1', '').split(':').map(Number);
+  return h * 60 + m;
+}
+const byKstOpen = (a: ExchangeStatus, b: ExchangeStatus) => kstOpenMin(a) - kstOpenMin(b);
+
 function pct(min: number): string {
   return `${((min / 1440) * 100).toFixed(4)}%`;
 }
 
-export function Timeline({ statuses, currentKSTMin, onExchangeClick }: TimelineProps) {
+export function Timeline({ statuses, currentKSTMin, onExchangeClick, pins, onTogglePin }: TimelineProps) {
   const markerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     markerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }, []);
 
-  const regions: Region[] = ['asia', 'europe', 'americas'];
+  const regions: Region[] = ['asia', 'middleeast', 'europe', 'africa', 'americas'];
+  const pinned = statuses.filter(s => pins.has(s.exchange.id)).sort(byKstOpen);
+
+  const renderRow = (s: ExchangeStatus) => (
+    <ExchangeRow
+      key={s.exchange.id}
+      status={s}
+      currentKSTMin={currentKSTMin}
+      onClick={() => onExchangeClick(s.exchange)}
+      isPinned={pins.has(s.exchange.id)}
+      onTogglePin={() => onTogglePin(s.exchange.id)}
+    />
+  );
 
   return (
     <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
@@ -65,9 +90,20 @@ export function Timeline({ statuses, currentKSTMin, onExchangeClick }: TimelineP
         </div>
       </div>
 
+      {/* Watchlist */}
+      {pinned.length > 0 && (
+        <div className="mb-3">
+          <div className="flex items-center gap-2 mb-1 border-b border-sky-900 pb-0.5">
+            <span className="text-[10px] font-bold tracking-widest text-sky-300">⭐ 관심</span>
+            <span className="text-[10px] text-gray-600">{pinned.length}개</span>
+          </div>
+          <div className="space-y-0.5">{pinned.map(renderRow)}</div>
+        </div>
+      )}
+
       {/* Exchange rows by region */}
       {regions.map(region => {
-        const group = statuses.filter(s => s.exchange.region === region);
+        const group = statuses.filter(s => s.exchange.region === region && !pins.has(s.exchange.id)).sort(byKstOpen);
         if (group.length === 0) return null;
         return (
           <div key={region} className="mb-3">
@@ -77,16 +113,7 @@ export function Timeline({ statuses, currentKSTMin, onExchangeClick }: TimelineP
               </span>
               <span className="text-[10px] text-gray-600">{group.length}개</span>
             </div>
-            <div className="space-y-0.5">
-              {group.map(s => (
-                <ExchangeRow
-                  key={s.exchange.id}
-                  status={s}
-                  currentKSTMin={currentKSTMin}
-                  onClick={() => onExchangeClick(s.exchange)}
-                />
-              ))}
-            </div>
+            <div className="space-y-0.5">{group.map(renderRow)}</div>
           </div>
         );
       })}

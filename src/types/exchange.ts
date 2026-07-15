@@ -1,4 +1,4 @@
-export type Region = 'asia' | 'europe' | 'americas';
+export type Region = 'asia' | 'middleeast' | 'europe' | 'africa' | 'americas';
 
 export type PhaseType =
   | 'preopening'
@@ -41,6 +41,7 @@ export interface Exchange {
   nameKr: string;
   country: string;
   flag: string;
+  cc: string;         // ISO 3166-1 alpha-2, lowercase (for <Flag/>)
   timezone: string;   // IANA timezone
   gmtOffset: number;  // base (non-DST) UTC offset in hours
   openTime: string;   // "HH:MM" local time
@@ -48,11 +49,32 @@ export interface Exchange {
   lunchBreak?: LunchBreak;
   region: Region;
   currency: string;
+  tradingDays?: number[]; // 0=Sun … 6=Sat; default Mon–Fri
   tradingPhases?: TradingPhase[];
   btigInfo?: BTIGInfo;
 }
 
-export type MarketStatus = 'open' | 'lunch' | 'closed';
+export type HolidayType = 'full_close' | 'early_close';
+
+export interface Holiday {
+  exchangeId: string;
+  date: string;        // exchange-local calendar date "YYYY-MM-DD"
+  name: string;
+  type: HolidayType;
+  closeTime?: string;  // local "HH:MM" when type === 'early_close'
+}
+
+export interface Note {
+  id: string;
+  exchangeId: string;
+  noteDate: string;    // "YYYY-MM-DD" the note refers to
+  body: string;
+  author?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type MarketStatus = 'open' | 'lunch' | 'closed' | 'holiday';
 
 export interface TimeSegment {
   startMin: number; // 0–1439 KST minutes
@@ -73,4 +95,7 @@ export interface ExchangeStatus {
   secondsToNext: number;  // seconds until next event
   nextEvent: 'open' | 'close' | 'lunch_end';
   timelineSegments: TimeSegment[];
+  holiday?: Holiday;      // set when today is a holiday for this exchange
+  isEarlyClose: boolean;  // true when today has an early-close override
+  isTradingDay: boolean;  // false on the exchange's local weekend/non-trading day
 }

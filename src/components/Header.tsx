@@ -6,11 +6,20 @@ interface HeaderProps {
   statuses: ExchangeStatus[];
   isDark: boolean;
   onToggleDark: () => void;
+  isEditor: boolean;
+  userEmail?: string;
+  onOpenNotes: () => void;
+  onLoginClick: () => void;
+  onLogout: () => void;
 }
 
-export function Header({ kstTimeStr, statuses, isDark, onToggleDark }: HeaderProps) {
+export function Header({
+  kstTimeStr, statuses, isDark, onToggleDark,
+  isEditor, userEmail, onOpenNotes, onLoginClick, onLogout,
+}: HeaderProps) {
   const openCount = statuses.filter(s => s.status === 'open').length;
   const lunchCount = statuses.filter(s => s.status === 'lunch').length;
+  const holidayCount = statuses.filter(s => s.status === 'holiday').length;
   const closedCount = statuses.filter(s => s.status === 'closed').length;
 
   const [hms, setHms] = React.useState(kstTimeStr);
@@ -49,6 +58,13 @@ export function Header({ kstTimeStr, statuses, isDark, onToggleDark }: HeaderPro
             <span className="text-gray-500">점심</span>
           </span>
         )}
+        {holidayCount > 0 && (
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-rose-400 inline-block" />
+            <span className="text-rose-400">{holidayCount}</span>
+            <span className="text-gray-500">휴장</span>
+          </span>
+        )}
         <span className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-gray-600 inline-block" />
           <span className="text-gray-400">{closedCount}</span>
@@ -58,14 +74,42 @@ export function Header({ kstTimeStr, statuses, isDark, onToggleDark }: HeaderPro
         <span className="text-gray-500 text-xs">{statuses.length}개 거래소</span>
       </div>
 
-      {/* Right: dark mode toggle */}
-      <button
-        onClick={onToggleDark}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors"
-        title={isDark ? '라이트 모드' : '다크 모드'}
-      >
-        {isDark ? '☀️' : '🌙'} {isDark ? 'Light' : 'Dark'}
-      </button>
+      {/* Right: notes + auth + dark toggle */}
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={onOpenNotes}
+          className="flex items-center gap-1 px-3 py-1.5 rounded text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+          title="전체 트레이더 노트"
+        >
+          📓 노트
+        </button>
+
+        {isEditor ? (
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
+            title={`${userEmail ?? '편집자'} · 로그아웃`}
+          >
+            ✏️ 편집 <span className="text-gray-500 hidden sm:inline">· 로그아웃</span>
+          </button>
+        ) : (
+          <button
+            onClick={onLoginClick}
+            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+            title="편집자 로그인"
+          >
+            🔒 편집 로그인
+          </button>
+        )}
+
+        <button
+          onClick={onToggleDark}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+          title={isDark ? '라이트 모드' : '다크 모드'}
+        >
+          {isDark ? '☀️' : '🌙'} {isDark ? 'Light' : 'Dark'}
+        </button>
+      </div>
     </header>
   );
 }

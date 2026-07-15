@@ -1,7 +1,15 @@
 import { Exchange } from '../types/exchange';
 import { exchangePhases } from './exchangePhases';
 
-export const exchanges: Exchange[] = [
+// ISO 3166-1 alpha-2 country codes for <Flag/> (lowercase).
+const CC: Record<string, string> = {
+  krx: 'kr', tse: 'jp', sse: 'cn', hkex: 'hk', sgx: 'sg', bse: 'in', asx: 'au', nzx: 'nz',
+  twse: 'tw', idx: 'id', myx: 'my', pse: 'ph', set: 'th',
+  lse: 'gb', euronext: 'fr', xetra: 'de', six: 'ch', borsa: 'it',
+  nyse: 'us', nasdaq: 'us', tsx: 'ca',
+};
+
+const rawExchanges: Omit<Exchange, 'cc'>[] = [
   // ── ASIA ──────────────────────────────────────────────
   {
     id: 'krx',
@@ -405,3 +413,5 @@ export const exchanges: Exchange[] = [
     },
   },
 ];
+
+export const exchanges: Exchange[] = rawExchanges.map(e => ({ ...e, cc: CC[e.id] ?? '' }));

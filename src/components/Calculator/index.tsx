@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Exchange, ExchangeStatus } from '../../types/exchange';
 import { formatGMT } from '../../utils/timeUtils';
+import { Flag } from '../Flag';
 
 interface CalculatorProps {
   exchanges: Exchange[];
@@ -142,15 +143,19 @@ const PRESETS: Preset[] = [
 function WorldClockRow({ status }: { status: ExchangeStatus }) {
   const { exchange, localTimeStr, status: mktStatus } = status;
   const dotColor = mktStatus === 'open' ? 'bg-emerald-400 animate-pulse' :
-    mktStatus === 'lunch' ? 'bg-amber-400' : 'bg-gray-600';
-  const statusText = mktStatus === 'open' ? 'OPEN' : mktStatus === 'lunch' ? 'LUNCH' : 'CLOSED';
+    mktStatus === 'lunch' ? 'bg-amber-400' :
+    mktStatus === 'holiday' ? 'bg-rose-400' : 'bg-gray-600';
+  const statusText = mktStatus === 'open' ? 'OPEN' :
+    mktStatus === 'lunch' ? 'LUNCH' :
+    mktStatus === 'holiday' ? 'HOLIDAY' : 'CLOSED';
   const statusColor = mktStatus === 'open' ? 'text-emerald-400' :
-    mktStatus === 'lunch' ? 'text-amber-400' : 'text-gray-500';
+    mktStatus === 'lunch' ? 'text-amber-400' :
+    mktStatus === 'holiday' ? 'text-rose-400' : 'text-gray-500';
 
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-gray-800/50 last:border-0">
       <div className="flex items-center gap-2 w-40 shrink-0">
-        <span className="text-base">{exchange.flag}</span>
+        <Flag cc={exchange.cc} className="w-5 h-3.5" />
         <div>
           <div className="text-[11px] font-bold text-gray-200 uppercase">{exchange.id}</div>
           <div className="text-[9px] text-gray-600">{exchange.country}</div>

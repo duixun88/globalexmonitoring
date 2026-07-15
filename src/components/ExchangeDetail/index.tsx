@@ -1,10 +1,32 @@
 import React, { useEffect, useCallback } from 'react';
-import { Exchange, TradingPhase, PhaseType } from '../../types/exchange';
-import { getTZOffsetHours } from '../../utils/timeUtils';
+import { Exchange, TradingPhase, PhaseType, Note, Holiday } from '../../types/exchange';
+import { getTZOffsetHours, formatTradingDays } from '../../utils/timeUtils';
+import { Flag } from '../Flag';
+import { TraderNotes } from '../TraderNotes';
+import { ExchangeInfoBox } from '../ExchangeInfoBox';
+import { ExchangeInfo } from '../../hooks/useExchangeInfo';
 
 interface ExchangeDetailProps {
   exchange: Exchange;
   onClose: () => void;
+  viewMin: number;
+  attached: boolean;
+  holiday?: Holiday;
+  info: ExchangeInfo;
+  onSaveInfo: (id: string, info: ExchangeInfo) => Promise<{ error?: string }>;
+  notes: Note[];
+  isEditor: boolean;
+  onAddNote: (exchangeId: string, date: string, body: string) => Promise<{ error?: string }>;
+  onDeleteNote: (id: string) => Promise<{ error?: string } | void>;
+}
+
+const PHASE_PRIORITY: Record<PhaseType, number> = {
+  lunch: 9, closing_auction: 8, continuous: 7, mid_day_auction: 6, opening_auction: 5,
+  trade_at_close: 4, after_hours: 3, block_trade: 2, negotiated: 2, odd_lot: 1, preopening: 1,
+};
+
+function inRangeWrap(x: number, s: number, e: number): boolean {
+  return e > s ? (x >= s && x < e) : (x >= s || x < e);
 }
 
 // ── Phase styling ────────────────────────────────────────────────────
@@ -130,10 +152,28 @@ function MiniTimeline({ phases, gmtOffsetHours }: { phases: TradingPhase[]; gmtO
 
 // ── Main component ───────────────────────────────────────────────────
 
-export function ExchangeDetail({ exchange, onClose }: ExchangeDetailProps) {
-  const { tradingPhases, btigInfo, timezone } = exchange;
+export function ExchangeDetail({ exchange, onClose, viewMin, attached, holiday, info, onSaveInfo, notes, isEditor, onAddNote, onDeleteNote }: ExchangeDetailProps) {
+  const { tradingPhases, timezone } = exchange;
   const gmtOffsetNow = getTZOffsetHours(timezone);
   const gmtLabel = gmtOffsetNow >= 0 ? `GMT+${gmtOffsetNow}` : `GMT${gmtOffsetNow}`;
+
+  // Local time at the viewed KST minute, and the current trading phase then.
+  const mod = (n: number, m: number) => ((n % m) + m) % m;
+  const localViewMin = mod(viewMin + Math.round((gmtOffsetNow - 9) * 60), 1440);
+  const localViewStr = `${String(Math.floor(localViewMin / 60)).padStart(2, '0')}:${String(localViewMin % 60).padStart(2, '0')}`;
+  let currentPhase: TradingPhase | null = null;
+  if (tradingPhases) {
+    let pr = -1;
+    tradingPhases.forEach(p => {
+      const s = hhmmToMin(p.startKST), e = hhmmToMin(p.endKST);
+      if (s !== e && inRangeWrap(viewMin, s, e) && (PHASE_PRIORITY[p.type] ?? 0) > pr) {
+        pr = PHASE_PRIORITY[p.type] ?? 0;
+        currentPhase = p;
+      }
+    });
+  }
+  // Narrow for JSX use (forEach closure widens the type otherwise).
+  const curPhase: TradingPhase | null = currentPhase;
 
   // Close on Escape key
   const handleKeyDown = useCallback(
@@ -160,7 +200,7 @@ export function ExchangeDetail({ exchange, onClose }: ExchangeDetailProps) {
         {/* Header */}
         <div className="flex items-start justify-between p-5 border-b border-gray-800">
           <div className="flex items-center gap-3">
-            <span className="text-4xl">{exchange.flag}</span>
+            <Flag cc={exchange.cc} className="w-11 h-8" />
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-gray-100">{exchange.name}</h2>
@@ -170,6 +210,9 @@ export function ExchangeDetail({ exchange, onClose }: ExchangeDetailProps) {
               </div>
               <div className="text-sm text-gray-400 mt-0.5">
                 {exchange.nameKr} · {exchange.country} · {exchange.currency}
+              </div>
+              <div className="text-[11px] text-gray-500 mt-0.5">
+                거래 요일 <span className="text-gray-300 font-semibold">{formatTradingDays(exchange.tradingDays)}</span>
               </div>
               <div className="text-xs text-sky-400 font-mono mt-1">
                 {gmtLabel} (실시간 · DST 자동)
@@ -186,6 +229,43 @@ export function ExchangeDetail({ exchange, onClose }: ExchangeDetailProps) {
         </div>
 
         <div className="p-5 space-y-5">
+          {/* Holiday / half-day banner (today, exchange-local) */}
+          {holiday && (
+            <div className={`rounded-lg px-4 py-2.5 text-sm font-bold flex items-center gap-2 border ${
+              holiday.type === 'full_close'
+                ? 'bg-rose-500/10 border-rose-700/50 text-rose-300'
+                : 'bg-amber-500/10 border-amber-700/50 text-amber-300'
+            }`}>
+              {holiday.type === 'full_close' ? '✕ 오늘 휴장' : '◐ 오늘 반장'}
+              <span className="font-normal text-gray-300">· {holiday.name}</span>
+            </div>
+          )}
+
+          {/* Current session strip */}
+          <div className={`rounded-lg px-4 py-3 flex items-center justify-between gap-3 border ${
+            curPhase ? 'border-sky-700/50 bg-sky-500/5' : 'border-gray-700 bg-gray-800/40'
+          }`}>
+            <div className="min-w-0">
+              <div className="text-[9px] uppercase tracking-widest text-gray-500">
+                {attached ? '현재 세션' : '선택 시점 세션'}
+              </div>
+              <div className="text-base font-bold text-gray-100 truncate">
+                {curPhase ? curPhase.nameKr : '거래 없음'}
+              </div>
+              {curPhase && (
+                <div className="text-[11px] font-mono text-gray-400">
+                  {curPhase.startKST}–{curPhase.endKST} KST
+                </div>
+              )}
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-xl font-bold font-mono text-sky-300 tabular-nums">{localViewStr}</div>
+              <div className="text-[9px] text-gray-500">
+                현지시각 · <span className={attached ? 'text-emerald-400' : 'text-amber-400'}>{attached ? 'LIVE' : '예상'}</span>
+              </div>
+            </div>
+          </div>
+
           {/* Mini timeline */}
           {tradingPhases && tradingPhases.length > 0 && (
             <MiniTimeline phases={tradingPhases} gmtOffsetHours={gmtOffsetNow} />
@@ -212,6 +292,7 @@ export function ExchangeDetail({ exchange, onClose }: ExchangeDetailProps) {
               <div className="space-y-1">
                 {tradingPhases.map((phase, i) => {
                   const style = PHASE_COLORS[phase.type];
+                  const isCur = curPhase === phase;
                   const cross = crossesMidnight(phase.startKST, phase.endKST);
                   const span = phaseSpanMinutes(phase.startKST, phase.endKST);
                   const localStart = kstToLocalStr(phase.startKST, gmtOffsetNow);
@@ -221,13 +302,16 @@ export function ExchangeDetail({ exchange, onClose }: ExchangeDetailProps) {
                   return (
                     <div
                       key={i}
-                      className={`${style.bg} rounded-lg px-3 py-2 flex items-center justify-between gap-4`}
+                      className={`${style.bg} rounded-lg px-3 py-2 flex items-center justify-between gap-4 ${isCur ? 'ring-1 ring-sky-500' : ''}`}
                     >
                       {/* Left: type label + name */}
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${style.bg} ${style.text} border border-current/20 whitespace-nowrap`}>
                           {PHASE_LABEL[phase.type]}
                         </span>
+                        {isCur && (
+                          <span className="text-[8px] font-bold text-sky-300 bg-sky-500/20 px-1 py-0.5 rounded shrink-0">NOW</span>
+                        )}
                         <div className="min-w-0">
                           <div className={`text-xs font-semibold ${style.text} truncate`}>
                             {phase.nameKr}
@@ -265,59 +349,27 @@ export function ExchangeDetail({ exchange, onClose }: ExchangeDetailProps) {
             <div className="text-center text-gray-600 text-sm py-4">세부 세션 데이터 없음</div>
           )}
 
-          {/* BTIG Info */}
-          {btigInfo && (
-            <div>
-              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">
-                BTIG 브로커 정보
-              </h3>
-              <div className="bg-gray-800/50 rounded-lg p-3 space-y-2">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-[9px] text-gray-500 mb-0.5">결제 주기</div>
-                    <div className="text-sm font-bold text-gray-200">{btigInfo.settlement}</div>
-                  </div>
-                  {btigInfo.minLot && (
-                    <div>
-                      <div className="text-[9px] text-gray-500 mb-0.5">최소 거래 단위</div>
-                      <div className="text-sm font-bold text-gray-200">{btigInfo.minLot.toLocaleString()} 주</div>
-                    </div>
-                  )}
-                </div>
+          {/* Exchange info (editable by editors) */}
+          <ExchangeInfoBox
+            exchangeId={exchange.id}
+            info={info}
+            isEditor={isEditor}
+            onSave={onSaveInfo}
+          />
 
-                {/* Order types */}
-                <div>
-                  <div className="text-[9px] text-gray-500 mb-1">주문 유형</div>
-                  <div className="flex flex-wrap gap-1">
-                    {btigInfo.orderTypes.map(ot => (
-                      <span
-                        key={ot}
-                        className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-700 text-gray-300"
-                      >
-                        {ot}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Transaction cost */}
-                {btigInfo.transactionCost && (
-                  <div>
-                    <div className="text-[9px] text-gray-500 mb-0.5">거래 비용</div>
-                    <div className="text-[11px] text-amber-300">{btigInfo.transactionCost}</div>
-                  </div>
-                )}
-
-                {/* Notes */}
-                {btigInfo.notes && (
-                  <div>
-                    <div className="text-[9px] text-gray-500 mb-0.5">비고</div>
-                    <div className="text-[11px] text-gray-400">{btigInfo.notes}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Trader notes */}
+          <div>
+            <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">
+              트레이더 노트 <span className="text-gray-600 normal-case tracking-normal font-normal">· 거래소별·날짜별</span>
+            </h3>
+            <TraderNotes
+              exchangeId={exchange.id}
+              notes={notes}
+              isEditor={isEditor}
+              onAdd={onAddNote}
+              onDelete={onDeleteNote}
+            />
+          </div>
 
           {/* Close hint */}
           <div className="text-center text-[10px] text-gray-700">

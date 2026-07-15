@@ -2,3 +2,8 @@ node_modules/
 dist/
 build/
 *.log
+
+# env (secrets) — .env.example 은 추적, 실제 값은 .env 에
+.env
+.env.local
+.env.*.local

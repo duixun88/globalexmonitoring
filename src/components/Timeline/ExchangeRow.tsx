@@ -1,11 +1,14 @@
 import React from 'react';
 import { ExchangeStatus, TimeSegment } from '../../types/exchange';
 import { formatGMT } from '../../utils/timeUtils';
+import { Flag } from '../Flag';
 
 interface ExchangeRowProps {
   status: ExchangeStatus;
   currentKSTMin: number;
   onClick: () => void;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 function pct(min: number): string {
@@ -24,15 +27,18 @@ function SegmentBar({ seg }: { seg: TimeSegment }) {
   );
 }
 
-export function ExchangeRow({ status, currentKSTMin, onClick }: ExchangeRowProps) {
-  const { exchange, kstOpenStr, kstCloseStr, localOpenStr, localCloseStr, gmtOffsetNow, isDST, timelineSegments, status: mktStatus } = status;
+export function ExchangeRow({ status, currentKSTMin, onClick, isPinned, onTogglePin }: ExchangeRowProps) {
+  const { exchange, kstOpenStr, kstCloseStr, localOpenStr, localCloseStr, gmtOffsetNow, isDST, timelineSegments, status: mktStatus, holiday, isEarlyClose, isTradingDay } = status;
 
   const statusColor =
     mktStatus === 'open' ? 'text-emerald-400' :
-    mktStatus === 'lunch' ? 'text-amber-400' : 'text-gray-500';
+    mktStatus === 'lunch' ? 'text-amber-400' :
+    mktStatus === 'holiday' ? 'text-rose-400' : 'text-gray-500';
 
   const statusLabel =
-    mktStatus === 'open' ? 'OPEN' : mktStatus === 'lunch' ? 'LUNCH' : 'CLOSED';
+    mktStatus === 'open' ? 'OPEN' :
+    mktStatus === 'lunch' ? 'LUNCH' :
+    mktStatus === 'holiday' ? 'HOLIDAY' : 'CLOSED';
 
   const hasPhases = exchange.tradingPhases && exchange.tradingPhases.length > 0;
 
@@ -44,12 +50,27 @@ export function ExchangeRow({ status, currentKSTMin, onClick }: ExchangeRowProps
     >
       {/* Exchange label — fixed width */}
       <div className="flex items-center gap-1.5 w-40 shrink-0">
-        <span className="text-base">{exchange.flag}</span>
+        {onTogglePin && (
+          <button
+            onClick={e => { e.stopPropagation(); onTogglePin(); }}
+            title={isPinned ? '관심 해제' : '관심 고정'}
+            className={`text-xs leading-none shrink-0 ${isPinned ? 'text-sky-400' : 'text-gray-600 hover:text-gray-400'}`}
+          >
+            {isPinned ? '★' : '☆'}
+          </button>
+        )}
+        <Flag cc={exchange.cc} className="w-5 h-3.5" />
         <div className="min-w-0">
           <div className="text-xs font-semibold text-gray-200 uppercase tracking-wide truncate">
             {exchange.id.toUpperCase()}
             {isDST && (
               <span className="ml-1 text-[9px] font-bold text-sky-400 bg-sky-400/10 px-1 rounded">DST</span>
+            )}
+            {isEarlyClose && mktStatus !== 'holiday' && (
+              <span className="ml-1 text-[9px] font-bold text-amber-400 bg-amber-400/10 px-1 rounded">반장</span>
+            )}
+            {!isTradingDay && mktStatus !== 'holiday' && (
+              <span className="ml-1 text-[9px] font-bold text-gray-400 bg-gray-500/15 px-1 rounded">주말</span>
             )}
             {hasPhases && (
               <span className="ml-1 text-[9px] text-gray-600 group-hover:text-gray-400">ⓘ</span>
@@ -69,6 +90,17 @@ export function ExchangeRow({ status, currentKSTMin, onClick }: ExchangeRowProps
         {timelineSegments.map((seg, i) => (
           <SegmentBar key={i} seg={seg} />
         ))}
+        {mktStatus === 'holiday' && (
+          <div
+            className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-rose-300 gap-1"
+            style={{ backgroundImage: 'repeating-linear-gradient(45deg, rgba(244,63,94,0.18) 0 6px, transparent 6px 12px)' }}
+          >
+            ✕ 휴장{holiday ? ` · ${holiday.name}` : ''}
+          </div>
+        )}
+        {!isTradingDay && mktStatus !== 'holiday' && (
+          <div className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-gray-500">주말 휴장</div>
+        )}
         <div
           className="absolute top-0 h-full w-px bg-red-500 z-10"
           style={{ left: pct(currentKSTMin) }}
